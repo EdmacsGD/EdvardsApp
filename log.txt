@@ -1,0 +1,8 @@
+# BUILD LOG
+# One update per line:   date | project | what you did
+# Date must be YYYY-MM-DD. Project names: Meridian, SPAN, Sukkerringer, The Game
+# The project part is optional. Order doesn't matter, the site sorts by date.
+# Lines starting with # are notes for you and don't show on the site.
+
+2026-10-14 | Hub | Built this hub page.
+2026-10-14 | Rocket | Added photos and videos of my rocket launch.
