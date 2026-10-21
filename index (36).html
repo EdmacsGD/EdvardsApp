@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edvards | Projects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --ink: #121212;
+    --muted: #6b6b70;
+    --line: #e4e2dc;
+    --accent: #5b5bf0;
+    --accent-soft: #ebebfd;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+  /* Sticky nav bar. backdrop-filter blurs whatever scrolls under it (the "frosted glass" look). */
+  .topbar {
+    position: sticky; top: 12px; z-index: 10;
+    margin: 12px auto 0;
+    width: fit-content; max-width: calc(100% - 32px);
+    display: flex; gap: 4px; padding: 5px;
+    background: rgba(255,255,255,.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.06);
+    overflow-x: auto;
+  }
+  .topbar a {
+    padding: 8px 16px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: .9rem; font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+  }
+  .topbar a:hover { color: var(--ink); }
+  .topbar a.active { background: var(--ink); color: #fff; }
+
+  /* Header */
+  header { padding: 72px 0 36px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: .85rem; color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 4px #22c55e22; }
+  header h1 {
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.6rem, 8vw, 5rem);
+    line-height: .98;
+    letter-spacing: -.04em;
+  }
+  header h1 .grad {
+    background: linear-gradient(90deg, var(--accent), #b05bf0);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  header p { color: var(--muted); max-width: 480px; margin-top: 18px; font-size: 1.05rem; }
+
+  h2 {
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    letter-spacing: -.02em;
+    margin-bottom: 18px;
+  }
+
+  /* Only the active view is shown. JS adds .active based on the URL hash. */
+  section { display: none; padding: 8px 0 56px; }
+  section { scroll-margin-top: 80px; } /* so the sticky nav does not cover a heading when the page jumps to it */
+  section.active { display: block; animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* Filter bar */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .filters button {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 7px 16px;
+    border-radius: 999px;
+    font: inherit; font-size: .88rem; font-weight: 500;
+    cursor: pointer;
+  }
+  .filters button.active { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+  /* Project cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 8px;
+    text-decoration: none;
+    display: flex; flex-direction: column;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,.08); }
+
+  /* Preview sits inset inside the card with its own rounded corners. */
+  .preview {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: 14px;
+    background: #ecebe6;
+  }
+  /* Live iframe preview: rendered 1280px wide, scaled down to fit. pointer-events:none keeps the card clickable. */
+  .preview iframe {
+    position: absolute; top: 0; left: 0;
+    width: 1280px; height: 800px;
+    border: 0;
+    transform-origin: 0 0;
+    pointer-events: none;
+  }
+  .preview .placeholder {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    color: var(--muted); font-size: .85rem;
+  }
+  .preview img.shot, .preview video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .preview video { opacity: 0; transition: opacity .3s; }
+  .preview.playing video { opacity: 1; }
+  /* Progress bar during the 1.5 s hover wait */
+  .preview::after {
+    content: "";
+    position: absolute; left: 0; bottom: 0;
+    height: 3px; width: 0;
+    background: var(--accent);
+  }
+  .preview.waiting::after { width: 100%; transition: width 1.5s linear; }
+  .badge {
+    position: absolute; top: 10px; left: 10px;
+    font-size: .72rem; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px;
+    background: rgba(255,255,255,.9); color: var(--ink);
+    transition: opacity .2s;
+  }
+  .preview.playing .badge { opacity: 0; }
+
+  .card-body { padding: 14px 12px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .title-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .card-body h3 { font-family: "Inter Tight", sans-serif; font-size: 1.2rem; letter-spacing: -.01em; }
+  .arrow { color: var(--muted); transition: transform .2s, color .2s; }
+  .card:hover .arrow { transform: translate(3px, -3px); color: var(--accent); }
+  .card-body p { color: var(--muted); font-size: .92rem; flex: 1; }
+  .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: .74rem; padding: 3px 10px; border-radius: 999px; background: #f1f0ec; color: var(--muted); }
+  .tag.cat { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .updated { font-size: .78rem; color: var(--muted); }
+
+  /* Playable embed */
+  .play-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #000;
+  }
+  .play-note { color: var(--muted); font-size: .9rem; margin-top: 10px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+
+  /* Fallback preview for sites that can't be shown in an iframe (like Unity Play) */
+  .preview .tile {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #1f1f2e, #3a2f6b);
+    color: #fff;
+    font-family: "Inter Tight", sans-serif; font-weight: 800; font-size: 1.6rem;
+    letter-spacing: -.02em;
+  }
+  .tag.claude { background: #fbeee6; color: #c2552b; font-weight: 600; }
+
+  /* Rocket */
+  .rocket-intro { color: var(--muted); max-width: 640px; margin-bottom: 18px; }
+  /* Two videos side by side with equal height. Column widths are set to each
+     video's aspect ratio (16/9 = 1.78, 9/16 = 0.56), so the rows line up exactly. */
+  .videos { display: grid; grid-template-columns: 1.78fr 0.5625fr; gap: 12px; }
+  .videos figure { margin: 0; }
+  .rocket-video {
+    width: 100%;
+    border-radius: 14px;
+    background: #111;
+    display: block;
+  }
+  .videos figcaption { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+  @media (max-width: 720px) {
+    .videos { grid-template-columns: 1fr; }
+    .videos figure:nth-child(2) .rocket-video { max-height: 70vh; width: auto; margin: 0 auto; }
+  }
+  .photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+  .photo { margin: 0; }
+  .sub { font-family: "Inter Tight", sans-serif; font-size: 1.15rem; margin: 26px 0 12px; }
+  .sub:first-of-type { margin-top: 4px; }
+  .photos.tall { margin-top: 0; }
+  #rocketPhotos { grid-template-columns: repeat(5, 1fr); }
+  .photos.tall .img { aspect-ratio: 3 / 4; } /* build photos are portrait */
+  .photo .img {
+    aspect-ratio: 4 / 3;
+    background: #f1f0ec;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    color: var(--muted); font-size: .8rem;
+    overflow: hidden;
+  }
+  .photo img { width: 100%; height: 100%; object-fit: cover; }
+  .photo figcaption { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+  .placeholder-box {
+    aspect-ratio: 16 / 9; border-radius: 14px; background: #f1f0ec;
+    display: grid; place-items: center; color: var(--muted); font-size: .9rem;
+  }
+
+  /* Build log as a timeline */
+  .log { list-style: none; border-left: 2px solid var(--line); margin-left: 6px; }
+  .log li { position: relative; padding: 0 0 22px 22px; }
+  .log li::before {
+    content: ""; position: absolute; left: -7px; top: 6px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--accent);
+  }
+  .log time { display: block; color: var(--accent); font-size: .85rem; font-weight: 600; margin-bottom: 2px; }
+  .log .tag { margin-right: 4px; }
+
+  /* About */
+  .about p { color: var(--muted); max-width: 600px; margin-bottom: 14px; }
+  .btn {
+    display: inline-block;
+    padding: 11px 22px;
+    border-radius: 999px;
+    background: var(--ink); color: #fff;
+    text-decoration: none; font-weight: 600; font-size: .92rem;
+  }
+  .btn:hover { background: var(--accent); }
+
+  /* Project page with version history */
+  .back { display: inline-block; margin-bottom: 14px; color: var(--muted); text-decoration: none; font-size: .9rem; }
+  .back:hover { color: var(--accent); }
+  .proj-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .proj-head p { color: var(--muted); max-width: 560px; }
+  .versions { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .version { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+  .version-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .version-top h3 { font-family: "Inter Tight", sans-serif; font-size: 1.1rem; }
+  .version-top .when { color: var(--muted); font-size: .85rem; font-weight: 400; margin-left: 8px; }
+  .version ul { margin: 8px 0 0 18px; color: var(--muted); font-size: .93rem; }
+  .version .actions { display: flex; gap: 8px; }
+  .btn.small { padding: 7px 14px; font-size: .82rem; }
+  .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+  .btn.ghost:hover { background: var(--accent-soft); color: var(--accent); }
+  .latest-badge { font-size: .7rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #e3f6ea; color: #1d7a45; margin-left: 8px; vertical-align: middle; }
+  footer { padding: 28px 0 48px; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); }
+
+  @media (max-width: 720px) {
+    header { padding: 48px 0 28px; }
+    .panel { padding: 16px; }
+    .topbar a { padding: 8px 11px; font-size: .85rem; }
+    .photos, #rocketPhotos { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="#projects">Projects</a>
+  <a href="#play">Play</a>
+  <a href="#rocket">Rocket</a>
+  <a href="#log">Log</a>
+  <a href="#about">About</a>
+</nav>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><span class="dot"></span>Currently building</div>
+    <h1>Edvards<span class="grad">.</span><br>Things I <span class="grad">build.</span></h1>
+    <p>Browser games, Unity games and school tools. Most of my web games are made together with Claude.</p>
+  </header>
+
+  <section id="projects">
+    <h2>Projects</h2>
+    <div class="filters" id="filters"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+
+  <section id="meridian">
+    <a class="back" href="#projects">&larr; All projects</a>
+    <div class="proj-head">
+      <div>
+        <h2>Meridian</h2>
+        <p>Country guessing games with accounts and leaderboards. Every version I have uploaded is here. Download one to see how the game looked back then.</p>
+      </div>
+      <a class="btn" href="https://edmacsgd.github.io/Meridian/" target="_blank" rel="noopener">Play the latest</a>
+    </div>
+    <ul class="versions" id="meridianVersions"></ul>
+  </section>
+
+  <section id="play">
+    <h2>Play it here</h2>
+    <iframe class="play-frame" id="playFrame" title="Playable game"></iframe>
+    <p class="play-note" id="playNote"></p>
+  </section>
+
+  <section id="rocket">
+    <h2>Rocket</h2>
+    <div class="panel">
+      <p class="rocket-intro" id="rocketIntro"></p>
+      <h3 class="sub">How I built it</h3>
+      <div class="photos tall" id="rocketBuild"></div>
+      <h3 class="sub">Launch</h3>
+      <div id="rocketVideo"></div>
+      <div class="photos" id="rocketPhotos"></div>
+    </div>
+  </section>
+
+  <section id="log">
+    <h2>Build log</h2>
+    <div class="filters" id="logFilters"></div>
+    <ul class="log" id="logList"></ul>
+  </section>
+
+  <section id="about" class="about">
+    <h2>About</h2>
+    <div class="panel">
+      <p>I'm Edvards, a student who builds games and hardware. I use HTML, JavaScript, Unity and VS Code.</p>
+      <p>I make my web games together with Claude. I come up with the idea and the design, test everything, and decide what to change. Claude helps me write the code and explains how it works, so I learn while I build.</p>
+      <p>Right now I'm starting to learn Python and more about how to use Unity.</p>
+      <a class="btn" href="https://github.com/edmacsgd" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">Edvards, 2026</div>
+</footer>
+
+<script>
+// ---- DATA: edit these arrays to add projects. Log entries go in log.txt ----
+
+const projects = [
+  {
+    name: "Meridian",
+    page: "#meridian",            // card opens the version page instead of the game
+    logName: "Meridian",           // the name you write in log.txt
+    url: "https://edmacsgd.github.io/Meridian/",
+    desc: "Country guessing games: flags, maps, capitals, a daily test and leaderboards.",
+    category: "Games",
+    tags: ["Geography", "Accounts"],
+    updated: "2026-09-30",
+    claude: true                  // shows a "Made with Claude" tag
+  },
+  {
+    name: "SPAN Bridge Builder",
+    logName: "SPAN",           // the name you write in log.txt
+    url: "https://edmacsgd.github.io/Bridge_simulator/",
+    desc: "Build bridges from road, wood and steel, then send a car over and watch the physics.",
+    category: "Games",
+    tags: ["Physics", "Canvas"],
+    updated: "2026-09-30",
+    image: "span.jpg",   // screenshot instead of live iframe, so no tutorial shows
+    video: "span.webm",  // plays after hovering 1.5 s
+    claude: true
+  },
+  {
+    name: "Teacup Frog Climb",
+    logName: "Frog",              // the name you write in log.txt
+    url: "https://edmacsgd.github.io/teacup-frog-climb/",
+    desc: "A frog in a teacup that can't walk or jump climbs a junkyard tower with a pickaxe. Getting Over It style, with sugar cubes, achievements and a leaderboard.",
+    category: "Games",
+    tags: ["Physics", "Leaderboard", "Map maker"],
+    updated: "2026-10-21",
+    image: "frog.jpg",            // screenshot instead of live iframe
+    claude: true
+  },
+  {
+    name: "Sukkerringer",
+    logName: "Sukkerringer",           // the name you write in log.txt
+    url: "https://edmacsgd.github.io/Sukkeringer/",
+    desc: "Learn carbohydrate molecules: study them, build them, then take a 10-question quiz.",
+    category: "Learning",
+    tags: ["Science", "Norwegian"],
+    updated: "2026-09-28",
+    claude: true
+  },
+  {
+    name: "The Game",
+    logName: "The Game",           // the name you write in log.txt
+    url: "https://play.unity.com/en/games/80746432-3b5b-4d3f-a280-1ccbbe424986/the-game-upload-13",
+    desc: "My Unity game, playable in the browser on Unity Play. (Write one line about what you do in it.)",
+    category: "Unity",
+    tags: ["C#"],
+    updated: "2026-10-14",        // change to the real upload date
+    noIframe: true                // shows a title tile instead of a live preview (Unity WebGL is too heavy for a thumbnail)
+  }
+  // Add more like this:
+  // { name: "Coldreach", url: "https://edmacsgd.github.io/Coldreach/", desc: "...", category: "Games", tags: ["Platformer"], updated: "2026-10-20" },
+];
+
+// Which project to embed in the "Play it here" view (must be in the list above).
+const playable = "SPAN Bridge Builder";
+
+// Rocket page. Put files in a "rocket" folder next to index.html, then fill these in.
+const rocket = {
+  intro: "I built a rocket with its own electronics inside: a sensor board that measures climb speed, air pressure and height, and a LoRa radio that sends the data down to a receiver on the ground. Then we launched it and it came back down on a parachute.",
+  build: [
+    { src: "build1.jpg", caption: "The electronics: radio module and sensor board" },
+    { src: "build2.jpg", caption: "Receiver code: gets the data over LoRa. A shows climb speed, B shows pressure, A+B shows height" },
+    { src: "build3.jpg", caption: "Battery and wiring taped together" },
+    { src: "build4.jpg", caption: "Fitting it into the payload bay" },
+    { src: "build5.jpg", caption: "Payload packed in" },
+    { src: "build6.jpg", caption: "Payload bay on top of the body tube" },
+    { src: "build7.jpg", caption: "Finished rocket" },
+    { src: "build8.jpg", caption: "Ready on the launch stand" }
+  ],
+  videos: [
+    { src: "launch-ground.mp4", poster: "launch-ground-poster.jpg", caption: "Launch, filmed from the ground" },
+    { src: "launch-follow.mp4", poster: "launch-follow-poster.jpg", caption: "Following it up and getting it back" }
+  ],
+  photos: [
+    { src: "pad.jpg",       caption: "On the launch pad" },
+    { src: "ignition.jpg",  caption: "Ignition" },
+    { src: "liftoff.jpg",   caption: "Liftoff" },
+    { src: "landed.jpg",    caption: "Landed: parachute, nose cone and body" },
+    { src: "recovered.jpg", caption: "Recovered after landing" }
+  ]
+};
+
+
+// Meridian versions, oldest first. Files are meridian-v1.html, meridian-v2.html ...
+// To add a new one: upload the file as meridian-v14.html and add a line at the bottom.
+const meridianVersions = [
+  { v: 1,  date: "2026-09-10", changes: ["First version: Clue Grid, Flag Match, Pin the Map and Countrydle", "Accounts, profile, and daily, weekly and all-time leaderboards"] },
+  { v: 2,  date: "2026-09-11", changes: ["New Timed Challenges: Map Placement, Flag Placement and Type Countries, with regions and difficulty", "Admin page to set score multipliers per game", "Leaderboard filters by game and region"] },
+  { v: 3,  date: "2026-09-11", changes: ["Removed the leaderboard filters again"] },
+  { v: 4,  date: "2026-09-11", changes: ["Admin can search players, set their points and ban or unban them"] },
+  { v: 5,  date: "2026-09-21", changes: ["New games: Higher or Lower (population and area) and Odd One Out", "Flags shown as images instead of emoji"] },
+  { v: 6,  date: "2026-09-23", changes: ["New design: warm paper colors and new fonts", "Tab bar at the bottom on phones"] },
+  { v: 7,  date: "2026-09-23", changes: ["Typed answers accept other names, so \"Macedonia\" counts as North Macedonia", "Admin can rename players"] },
+  { v: 8,  date: "2026-09-23", changes: ["Fixed: renaming a player failed with \"permission denied\""] },
+  { v: 9,  date: "2026-09-23", changes: ["New Daily Ultimate Test: 30 mixed questions, 24 right to pass, daily bonus", "New game: Type Capitals"] },
+  { v: 10, date: "2026-09-23", changes: ["New home screen with a spinning globe and Ultimate Test progress ring", "All games in one list instead of sections"] },
+  { v: 11, date: "2026-09-24", changes: ["Countrydle got a new board and keyboard look", "Map games now check which country you actually clicked"] },
+  { v: 12, date: "2026-09-24", changes: ["You can play without an account"] },
+  { v: 13, date: "2026-09-24", changes: ["Player pages: points per game, games played and play time", "Click a name on the leaderboard to open that player's page"] }
+];
+
+// The build log lives in log.txt (next to this file). Edit that file, not this one.
+
+// ---- RENDERING ----
+
+const grid = document.getElementById("grid");
+const filtersEl = document.getElementById("filters");
+
+let activeFilter = "All";
+function renderCards(filter) {
+  activeFilter = filter;
+  grid.innerHTML = "";
+  projects
+    .filter(p => filter === "All" || p.category === filter)
+    .forEach(p => {
+      const a = document.createElement("a");
+      a.className = "card";
+      if (p.page) {
+        a.href = p.page;                 // opens a page inside this site
+      } else {
+        a.href = p.url;                  // opens the game in a new tab
+        a.target = "_blank";
+        a.rel = "noopener";
+      }
+      a.innerHTML = `
+        <div class="preview">
+          ${p.image
+            ? `<img class="shot" src="${p.image}" alt="" loading="lazy">`
+            : p.noIframe
+            ? `<div class="tile">${p.name}</div>`
+            : `<div class="placeholder">Loading preview</div>
+               <iframe src="${p.url}" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>`}
+          ${p.video ? `<video src="${p.video}" muted loop playsinline preload="none"></video>
+                       <span class="badge">Hover to watch</span>` : ""}
+        </div>
+        <div class="card-body">
+          <div class="title-row"><h3>${p.name}</h3><span class="arrow">&#8599;</span></div>
+          <p>${p.desc}</p>
+          <div class="meta">
+            <div class="tags">
+              <span class="tag cat">${p.category}</span>
+              ${p.claude ? `<span class="tag claude">Made with Claude</span>` : ""}
+              ${p.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+            </div>
+            <span class="updated">${formatDate(p.updated)}</span>
+          </div>
+        </div>`;
+      grid.appendChild(a);
+      if (p.video) attachHoverVideo(a);
+    });
+  scalePreviews();
+}
+
+// Hover for 1.5 s -> video fades in and plays. Leave -> stop and rewind.
+// setTimeout schedules the start; clearTimeout cancels it if the mouse leaves early.
+function attachHoverVideo(card) {
+  const box = card.querySelector(".preview");
+  const video = box.querySelector("video");
+  let timer;
+  card.addEventListener("mouseenter", () => {
+    video.preload = "auto"; // start downloading now, so it's ready when the 1.5 s is up
+    box.classList.add("waiting");
+    timer = setTimeout(() => {
+      box.classList.remove("waiting");
+      box.classList.add("playing");
+      video.play().catch(() => {}); // play() returns a Promise; ignore if the browser blocks it
+    }, 1500);
+  });
+  card.addEventListener("mouseleave", () => {
+    clearTimeout(timer);
+    box.classList.remove("waiting", "playing");
+    video.pause();
+    video.currentTime = 0;
+  });
+}
+
+// Filter buttons are built from the categories that exist, so new ones appear automatically.
+const categories = ["All", ...new Set(projects.map(p => p.category))];
+categories.forEach((c, i) => {
+  const b = document.createElement("button");
+  b.textContent = c;
+  if (i === 0) b.classList.add("active");
+  b.onclick = () => {
+    filtersEl.querySelectorAll("button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    renderCards(c);
+  };
+  filtersEl.appendChild(b);
+});
+
+// Scale each 1280px-wide iframe down to fit its card.
+function scalePreviews() {
+  document.querySelectorAll(".preview iframe").forEach(iframe => {
+    iframe.style.transform = `scale(${iframe.parentElement.clientWidth / 1280})`;
+  });
+}
+window.addEventListener("resize", scalePreviews);
+
+function formatDate(iso) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// Playable embed
+const game = projects.find(p => p.name === playable);
+const playFrame = document.getElementById("playFrame");
+if (game) {
+  document.getElementById("playNote").textContent = `${game.name}. Click inside the game to give it keyboard focus.`;
+} else {
+  document.querySelector('.topbar a[href="#play"]').remove();
+}
+
+// ---- VIEWS ----
+// Each nav link changes the URL hash (#about). The hashchange event fires,
+// and only that section is shown. Back/forward buttons work for free.
+const views = [...document.querySelectorAll("section")].map(s => s.id);
+
+function showView() {
+  const wanted = location.hash.slice(1);
+  const id = views.includes(wanted) ? wanted : "projects";
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("active", s.id === id));
+  document.querySelectorAll(".topbar a").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+
+  // Only load the game while its view is open, so it doesn't use CPU in the background.
+  if (game) playFrame.src = id === "play" ? game.url : "about:blank";
+
+  scalePreviews(); // hidden elements have width 0, so rescale after showing
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", showView);
+
+// Rocket: show the real files if set, grey placeholders if not.
+document.getElementById("rocketIntro").textContent = rocket.intro;
+// preload="none" + poster: only the poster image downloads until someone presses play.
+document.getElementById("rocketVideo").innerHTML = `<div class="videos">${rocket.videos
+  .map(v => `
+    <figure>
+      <video class="rocket-video" src="${v.src}" poster="${v.poster}" controls playsinline preload="none"></video>
+      <figcaption>${v.caption}</figcaption>
+    </figure>`)
+  .join("")}</div>`;
+// One function renders any photo list, so build and launch photos share the same code.
+const photoHTML = list => list
+  .map(ph => `
+    <figure class="photo">
+      <div class="img"><img src="${ph.src}" alt="${ph.caption}" loading="lazy"></div>
+      <figcaption>${ph.caption}</figcaption>
+    </figure>`)
+  .join("");
+document.getElementById("rocketBuild").innerHTML = photoHTML(rocket.build);
+document.getElementById("rocketPhotos").innerHTML = photoHTML(rocket.photos);
+
+// ---- BUILD LOG (from log.txt) ----
+// Each line in log.txt looks like:   2026-10-15 | SPAN | Added wind to the bridges
+// The project part is optional:      2026-10-15 | Fixed a typo on the site
+// Lines starting with # are comments and get skipped.
+
+// Turns < > & into safe text, so a "<" you type in the log can't break the page.
+const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function parseLog(text) {
+  return text
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith("#"))
+    .map(line => line.split("|").map(part => part.trim()))
+    .filter(parts => /^\d{4}-\d{2}-\d{2}$/.test(parts[0]))   // skip lines without a valid date
+    .map(parts => parts.length >= 3
+      ? { date: parts[0], project: parts[1], text: parts.slice(2).join(" | ") }
+      : { date: parts[0], project: "", text: parts[1] || "" })
+    // Newest first. ISO dates (YYYY-MM-DD) sort correctly as plain text, so no Date math needed.
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+let logEntries = [];
+let logFilter = "All";
+
+function renderLog() {
+  const projectsInLog = ["All", ...new Set(logEntries.map(e => e.project).filter(Boolean))];
+  document.getElementById("logFilters").innerHTML = projectsInLog
+    .map(p => `<button class="${p === logFilter ? "active" : ""}" data-p="${esc(p)}">${esc(p)}</button>`)
+    .join("");
+  document.querySelectorAll("#logFilters button").forEach(b =>
+    b.onclick = () => { logFilter = b.dataset.p; renderLog(); });
+
+  const shown = logEntries.filter(e => logFilter === "All" || e.project === logFilter);
+  document.getElementById("logList").innerHTML = shown.length
+    ? shown.map(e => `
+        <li>
+          <time datetime="${e.date}">${formatDate(e.date)}</time>
+          ${e.project ? `<span class="tag cat">${esc(e.project)}</span> ` : ""}${esc(e.text)}
+        </li>`).join("")
+    : `<li>No entries yet.</li>`;
+}
+
+// Each card's date becomes the newest log entry for that project, if that's newer.
+function syncCardDates() {
+  projects.forEach(p => {
+    const latest = logEntries.find(e => e.project.toLowerCase() === (p.logName || p.name).toLowerCase());
+    if (latest && latest.date > p.updated) p.updated = latest.date;
+  });
+  renderCards(activeFilter);
+}
+
+// fetch() downloads log.txt from the same website. "no-cache" makes sure you
+// see a new entry right after uploading, not an old saved copy.
+fetch("log.txt", { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+  .then(text => { logEntries = parseLog(text); renderLog(); syncCardDates(); })
+  .catch(() => {
+    document.getElementById("logList").innerHTML =
+      "<li>Could not load log.txt. (It only works on the real website, not when opening the file directly.)</li>";
+  });
+
+
+// Version list, newest on top. The download attribute makes the browser save the file
+// instead of opening it, and sets the saved file name.
+document.getElementById("meridianVersions").innerHTML = [...meridianVersions].reverse()
+  .map((ver, i) => `
+    <li class="version">
+      <div class="version-top">
+        <h3>Version ${ver.v}<span class="when">${formatDate(ver.date)}</span>${i === 0 ? `<span class="latest-badge">Latest</span>` : ""}</h3>
+        <div class="actions">
+          <a class="btn small ghost" href="meridian-v${ver.v}.html" target="_blank" rel="noopener">Open</a>
+          <a class="btn small" href="meridian-v${ver.v}.html" download="Meridian v${ver.v}.html">Download</a>
+        </div>
+      </div>
+      <ul>${ver.changes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+    </li>`)
+  .join("");
+
+renderCards("All");
+showView();
+</script>
+</body>
+</html>
